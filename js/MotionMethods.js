@@ -2,24 +2,71 @@ MM_snowFall = function(clipList, clipInitScale, s3d, cb)
 {
 	console.log("snow fall start");
 	
-	s3d.setCamera(0,0,0);
+	s3d.resetSpace();
+	s3d.posZ = 0;
+	s3d.arcZ = -.1;
+	s3d.arcY = .1;
+	s3d.arcX = -.1;
+	//s3d.setSpace(0,0,-400);
 	
+	var array = [];
+	for(var key in clipList) array.push(clipList[key]);
+	
+	array.sort(sortFunc);
+	
+	var i;
 	var tl = new TimelineLite();
-	
-	/*
-	for(var clipId in clipList)
-	{
-		var clip = clipList[clipId];
-	
-	*/
-	
 	var duration = 10;
 	
-	TweenLite.from(s3d, duration, {cameraZ:s3d.cameraZ-1000, cameraArcZ:s3d.cameraArcZ + 10, onComplete:timelineComplete});
+	var time = 5;
+	var timeStack = time;
+	
+	for(i=0;i<array.length;i++)
+	{
+		var clip = array[i];
+		var distance = Math.sqrt(clip.initX*clip.initX + clip.initY*clip.initY);
+		clip.length = distance;
+		clip.distance = 0;
+		
+		var initArc = Math.atan2(clip.initY, clip.initX);
+		clip.arc = initArc;
+		
+		var randomArcRange = 20;
+		initArc = initArc - randomArcRange/2 + Math.random()*randomArcRange;
+		
+		var delay = i * .02;
+		
+		var tl2 = new TimelineLite();
+		tl2.from(clip, time, {delay:delay, initScale:clip.initScale*5, z3d:clip.z3d+3000, distance:distance*4, arc:initArc, onUpdate:circleMotion_update, onUpdateParams:[clip]});
+		
+		tl.add(tl2, "-=" + tl2.duration);
+		
+		timeStack += .02;
+	}
+	
+	duration = timeStack - 3;
+	
+	console.log("duration = " + duration);
+	
+	function circleMotion_update(clip)
+	{
+		var cosV = Math.cos(clip.arc);
+		var sinV = Math.sin(clip.arc);
+		
+		clip.x3d = (clip.length + clip.distance * clipRangeScale) * cosV;
+		clip.y3d = (clip.length + clip.distance * clipRangeScale) * sinV;
+	}
+	
+	TweenLite.from(s3d, duration, {ease:Power1.easeOut, posZ:s3d.posZ-2000, arcZ:s3d.arcZ + .4, onComplete:timelineComplete});
 	
 	function timelineComplete()
 	{
 		cb.apply(null);
+	}
+	
+	function sortFunc(a, b)
+	{
+		return a.colorHex - b.colorHex;
 	}
 }
 
@@ -36,7 +83,7 @@ MM_circle = function(centerX, centerY, clipList, clipInitScale, clipRangeScale)
 		clip.length = distance;
 		clip.distance = 0;
 		
-		var targetDistance = distance * 0;
+		var targetDistance = distance * 1;
 		
 		var targetZ = clip.initZ - 300;
 		var targetScale = 1;
