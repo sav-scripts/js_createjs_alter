@@ -156,7 +156,8 @@ function Simple3DSpcae(parentContainer, focalLength)
 		this.arcY = 0;
 		this.arcZ = 0;
 		
-		this.setSpace(0, 0, -_focalLength);
+		//this.setSpace(0, 0, -_focalLength);
+		this.setSpace(0, 0, 0);
 		/*
 		this.posX = 0;
 		this.posY = 0;
@@ -192,7 +193,7 @@ function Simple3DSpcae(parentContainer, focalLength)
 			
 			var x1 = x0;
 			var y1 = y0 * _cosX - z0 * _sinX;
-			var z1 = y0 * _sinX - z0 * _cosX;
+			var z1 = y0 * _sinX + z0 * _cosX;
 			
 			
 			/*

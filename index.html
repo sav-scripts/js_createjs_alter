@@ -37,6 +37,7 @@
 <canvas id="upper_canvas"></canvas>
 
 <div id="resources">
+<!--
 <img src="images/lenna-300x300_alpha.png" />
 <img src="images/rabbit.jpg" />
 <img src="images/bird.png" />
@@ -45,6 +46,7 @@
 <img src="images/ClipImg2.png" />
 <img src="images/ClipImg3.png" />
 <img src="images/ClipImg5.png" />
+-->
 </div>
 <div id="sample_image_box"></div>
 <div id="tool_box">
@@ -60,8 +62,8 @@
     
     <div class="info">
     Item => <br />
-    Position: <div2 id="item_position"></div2><br />
-    Rotation: <div2 id="item_arc"></div2><br />
+    Pos: <div2 id="item_position"></div2><br />
+    Arc: <div2 id="item_arc"></div2><br />
     </div>
 
 </div>
@@ -80,11 +82,11 @@ var lockCameraMove = false;
 var lockMotion = false;
 
 var numCols, numRows;
-var focalLength = 400;
-var blockWidth = 8, blockHeight = 8;
+var focalLength = 500;
+var blockWidth = 6, blockHeight = 6;
 var blockSize = Math.floor(blockWidth/2);
 var initZ = 0;
-var clipRangeScale = 1.6;
+var clipRangeScale = 1.8;
 
 //var useImageClip = false;
 //var clipInitScale = 1;
@@ -99,8 +101,8 @@ var useCache = false;
 //var imagePath = "images/lenna-300x300_alpha.png";
 //var imagePath = "images/lenna-300x300.png";
 //var imagePath = "images/flower.png";
-//var imagePath = "images/rabbit.jpg";
-var imagePath = "images/bird.png";
+var imagePath = "images/rabbit.jpg";
+//var imagePath = "images/bird.png";
 //var particleImagePath = "images/ClipImg5.png";
 var particleImagePathList = [
 	"images/ClipImg3.png",
@@ -117,12 +119,27 @@ function init()
 	loadingIcon = new SimplePreloading();
 	loadingIcon.popInCenter();
 	
-	sampleImage = new Image();
-	sampleImage.onload = function()
-	{	
+	loadImages();
+}
+
+function loadImages()
+{
+	var queue = new createjs.LoadQueue(false);
+	queue.addEventListener("complete", loadImagesComplete);
+	
+	
+	var array = particleImagePathList.concat([imagePath]);
+	queue.loadManifest(array);
+	
+	function loadImagesComplete()
+	{
+		sampleImage = new Image();
+		sampleImage.src = imagePath;
+		
 		build();
 	}
-	sampleImage.src = imagePath;
+	
+	//queue.load();
 }
 	
 function build()
@@ -445,8 +462,8 @@ function build()
 			var tx = -$("#tool_box").width()-1;
 			TweenLite.to("#tool_box", .3, {left:tx, ease:Power1.easeOut});
 			
-			tx = window.innerWidth + 1;
-			TweenLite.to("#sample_image_box", .3, {left:tx, ease:Power1.easeOut});
+			//tx = window.innerWidth + 1;
+			TweenLite.to("#sample_image_box", .3, {alpha:0, ease:Power1.easeOut});
 		}
 		else
 		{
@@ -454,8 +471,8 @@ function build()
 			var tx = 0;
 			TweenLite.to("#tool_box", .5, {left:tx, ease:Back.easeOut});
 			
-			tx = window.innerWidth - 10 - $("#sample_image_box").width();
-			TweenLite.to("#sample_image_box", .3, {left:tx, ease:Power1.easeOut});
+			//tx = window.innerWidth - 10 - $("#sample_image_box").width();
+			TweenLite.to("#sample_image_box", .3, {alpha:1, ease:Power1.easeOut});
 		}
 	}
 	
