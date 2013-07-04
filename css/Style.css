@@ -1,0 +1,93 @@
+@charset "utf-8";
+
+body{
+	background:#333;
+	margin:0px;
+}
+#test_canvas
+{
+	z-index:1;
+	position:absolute;
+	left:0px;
+	top:0px;
+}
+#upper_canvas
+{
+	z-index:2;
+	position:absolute;
+	left:0px;
+	top:0px;
+}
+#tool_block
+{
+	position:absolute;
+	top:0px;
+	left:5px;
+	z-index:4;
+	color:#CCC;
+	padding:5px;
+	line-height:20px;
+}
+#resources{
+	visibility:hidden;
+}
+#sample_image_box{
+	position:absolute;
+	background:#666;
+	border-style:outset;
+	border-radius:1px;
+	border-width:1px;
+	overflow:hidden;
+	top:20px;
+	left:20px;
+	z-index:5;
+	width:150px; 
+	height:150px;
+	padding: 0px;
+	visibility:hidden;
+}
+#tool_box
+{
+	position:absolute;
+	background:#666;
+	border-style:outset;
+	border-radius:1px;
+	border-width:1px;
+	overflow:hidden;
+	top:20px;
+	left:20px;
+	z-index:5;
+	width:150px; 
+	height:300px;
+	padding: 0px;
+	visibility:hidden;
+}
+#tool_box button
+{
+	width:100%;
+}
+#tool_box select
+{
+	width:100%;
+	margin-bottom:10px;
+}
+#tool_box div
+{
+	width:100%;
+	margin:0px;
+	color:#ddd;
+	text-align:center;
+}
+#tool_box div.info
+{
+	position:absolute;
+	left 10px;
+	bottom:0px;
+	text-align:left;
+	font-size:12px;
+}
+#tool_box div.info.div
+{
+	text-align:left;
+}
+

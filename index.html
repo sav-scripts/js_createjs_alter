@@ -1,0 +1,554 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>CeateJS alter</title>
+<link rel="stylesheet" href="css/Style.css" />
+
+<script src="http://code.createjs.com/createjs-2013.05.14.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/latest/TweenMax.min.js"></script>
+
+<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
+<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+
+<script src="js/easeljs/filters/ColorMatrixFilter.js"></script>
+<script src="js/easeljs/filters/ColorFilter.js"></script>
+
+<script src="js/stats.min.js"></script>
+<script src="js/ImageTools.js"></script>
+<!--
+<script src="js/BitmapDataJs/BitmapData.js"></script>
+<script src="js/BitmapDataJs/Matrix.js"></script>
+<script src="js/BitmapDataJs/Point.js"></script>
+<script src="js/BitmapDataJs/Rectangle.js"></script>
+-->
+<script src="js/KeyHandler.js"></script>
+<script src="js/Simple3D.js"></script>
+<script src="js/MotionMethods.js"></script>
+<script src="js/SimplePreLoading.js"></script>
+
+
+</head>
+
+<body onload="init()">
+<div id="tool_block"></div>
+<canvas id="test_canvas"></canvas>
+<canvas id="upper_canvas"></canvas>
+
+<div id="resources">
+<img src="images/lenna-262x300_alpha.png" />
+<img src="images/rabbit.jpg" />
+<img src="images/bird.png" />
+<img src="images/ClipImg1.png" />
+<img src="images/ClipImg2.png" />
+<img src="images/ClipImg3.png" />
+<img src="images/ClipImg5.png" />
+</div>
+<div id="sample_image_box"></div>
+<div id="tool_box">
+    
+    <div>Motion Method</div>
+    <select id="motion_method"> 
+    <option value="circle" selected>Circle</option>
+    <option value="random_even">Random Even</option>
+    <option value="snow_fall">Snow Fall</option>
+    </select>
+	<button id="btn_reset_camera">Reset Position</button>
+    
+    <div class="info">
+    Camera => <br />
+    Position: <div2 id="camera_position"></div2><br />
+    Rotation: <div2 id="camera_arc">camera arc</div2><br />
+    </div>
+
+</div>
+
+<script>
+
+var stats;
+
+var ss3d;
+var sampleImage;
+
+var toolsHiding = false;
+
+var lockCameraRotation = false;
+var lockCameraMove = false;
+var lockMotion = false;
+
+var numCols, numRows;
+var focalLength = 400;
+var blockWidth = 10, blockHeight = 10;
+var blockSize = Math.floor(blockWidth/2);
+var initZ = 0;
+var clipRangeScale = 1.3;
+
+//var useImageClip = false;
+//var clipInitScale = 1;
+
+var randomRotations = true;
+
+var useImageClip = true;
+var imageColorMultiply = -.3;
+var clipInitScale = .5;
+
+var useCache = false;
+//var imagePath = "images/lenna-300x300_alpha.png";
+//var imagePath = "images/lenna-262x300.png";
+var imagePath = "images/rabbit.jpg";
+//var imagePath = "images/bird.png";
+//var particleImagePath = "images/ClipImg5.png";
+var particleImagePathList = [
+	"images/ClipImg3.png",
+	"images/ClipImg5.png"];
+
+var loadingIcon;
+
+function init()
+{
+	stats = new Stats();
+	stats.setMode(0);
+	$("#tool_block").append(stats.domElement);
+	
+	loadingIcon = new SimplePreloading();
+	loadingIcon.popInCenter();
+	
+	sampleImage = new Image();
+	sampleImage.onload = function()
+	{	
+		build();
+	}
+	sampleImage.src = imagePath;
+}
+	
+function build()
+{
+	//TweenLite.delayedCall(.5, processBitmapData);
+	
+	var _p = this;
+	
+	var tl = new TimelineLite();
+	tl.call(initStage);
+	tl.call(processBitmapData, null, null, "+=1");
+	tl.call(buildTools, null, null, "+=1");
+	tl.call(buildInteractive, null, null, "+=1");
+	tl.call(loadingIcon.destroy, null, loadingIcon, "+=.2");
+		
+	/*	
+	initStage();
+	buildTools();
+	buildInteractive();
+	*/
+	
+	//loadingIcon.destroy();
+	
+	/*** methods ***/
+	
+	var mouseX, mouseY;
+	var angleX = 0, angleY = 0;
+	
+	var centerX, centerY;
+	var canvas, stage, clipContainer;
+	
+	var col, row;
+	
+		
+	function initStage()
+	{	
+		canvas = document.getElementById('test_canvas');
+		canvas.width = $(window).width();
+		canvas.height = $(window).height();	
+		
+		centerX = mouseX = canvas.width / 2;
+		centerY = mouseY = canvas.height / 2;
+	
+		stage = new createjs.Stage(canvas);
+		
+		s3d = new Simple3DSpcae(stage, focalLength);
+		s3d.container.x = canvas.width/2;
+		s3d.container.y = canvas.height/2;
+		
+		createjs.Ticker.addEventListener("tick", updateStage);	
+	}
+	
+	function addClip(x3d, y3d, z3d, useImage, picturePathOrColor, size, useCache)
+	{
+		//var clip = new Clip3D(imgPath, imgOffsetX, imgOffsetY, size, useCache);
+		var clip = new Clip3D();
+		clip.x3d = clip.initX = x3d;
+		clip.y3d = clip.initY = y3d;
+		clip.z3d = clip.initZ = z3d;
+		
+			var color = ImageTools.hexToRGB(picturePathOrColor);
+		
+		if(useImage)
+		{
+			var particleImagePath = particleImagePathList[Math.floor(Math.random()*particleImagePathList.length)];
+			var bitmap = new createjs.Bitmap(particleImagePath);
+			
+			bitmap.x = -20;
+			bitmap.y = -20;
+			
+			/*
+			var v = .23;
+			var colorMatrixFilter = new createjs.ColorMatrixFilter([
+				v, v, v, 0, color.r, // red
+				v, v, v, 0, color.g, // green
+				v, v, v, 0, color.b, // blue
+				0, 0, 0, 1, 0  // alpha
+			]);
+			bitmap.filters = [colorMatrixFilter];
+			*/
+			
+			var colorFilter = new createjs.ColorFilter(imageColorMultiply,imageColorMultiply,imageColorMultiply,1, color.r, color.g, color.b,0);
+			bitmap.filters = [colorFilter];
+		
+			//var image = new createjs.Bitmap(img);
+			bitmap.cache(0, 0, 40, 40);
+			//stage.addChild(image);
+			
+			clip.bitmap = bitmap;
+			clip.addChild(bitmap);
+		}
+		else
+		{
+			var g = new createjs.Graphics();
+			
+			g.beginFill(createjs.Graphics.getRGB(color.r,color.g,color.b));
+			g.drawCircle(0,0,size);
+		
+			var s = new createjs.Shape(g);
+			
+			if(useCache)s.cache(-size,-size,size*2,size*2);
+			clip.addChild(s);
+		}
+		
+		if(randomRotations) clip.rotation = Math.random()*360;
+		
+		s3d.addClip(clip);
+		
+		return clip;
+	}
+	
+	var tav = {x:0, y:0, z:0};
+	
+	function updateStage(evt)
+	{	
+		stats.begin();
+		
+		/*
+		if(lockCameraRotation == false)
+		{
+			angleY = -(mouseX - centerX) * 0.005;
+			angleX = -(mouseY - centerY) * 0.005;
+			
+			TweenLite.to(tav, .6, {ease:Power1.easeOut, x:angleX, y:angleY});	
+			s3d.setCamera(null, null, null, tav.x, tav.y, null);
+		}
+		*/
+		
+		angleZ = -(mouseX - centerX) * 0.005;
+		if(lockCameraRotation == false) s3d.setCamera(null, null, null, null, null, angleZ);
+		
+		s3d.update();
+		
+		stage.update();
+		
+		$("#camera_position").text("(" + Math.floor(s3d.cameraX) + ", "+Math.floor(s3d.cameraY)+", "+Math.floor(s3d.cameraZ)+")");
+		
+		$("#camera_arc").text("(" + floor2(s3d.cameraArcX) + ", "+floor2(s3d.cameraArcY)+", "+floor2(s3d.cameraArcZ)+")");
+		
+		stats.end();
+	}
+	
+	function floor2(v)
+	{
+		return Math.floor(v*100)/100;
+	}
+	
+	function processBitmapData()
+	{	
+		var imageData, imageWidth, imageHeight;
+		var blockList = [];
+		
+		var imageData = ImageTools.getImageData(sampleImage);
+		var imageWidth = sampleImage.width;
+		var imageHeight = sampleImage.height;
+		
+		//console.log("img width = " + imageWidth + ", image height = " + imageHeight);
+		//console.log("color = " + JSON.stringify(ImageTools.getRGBA(imageData, 100,100)));
+		
+		var dx, dy;
+		var numClips = 0;
+		var blockNumPixels = blockWidth * blockHeight;
+		var col, row;
+		numCols = Math.floor(imageWidth/blockWidth);
+		numRows = Math.floor(imageHeight/blockHeight);
+		
+		for(row=0;row<numRows;row++)
+		{	
+			blockList[row] = [];
+			
+			for(col=0;col<numCols;col++)
+			{
+				var startX = col*blockWidth;
+				var startY = row*blockHeight;
+				var tx, ty;				
+				
+				var r=0;g=0;b=0,a=0;
+				
+				for(dy=0;dy<blockHeight;dy++)
+				{
+					ty = startY + dy;
+					if(ty > imageHeight) continue;
+					
+					for(dx=0;dx<blockWidth;dx++)
+					{
+						tx = startX + dx;
+						if(tx > imageWidth) continue;
+						
+						var rgba = ImageTools.getRGBA(imageData, imageWidth, tx, ty);
+						r += rgba.r;
+						g += rgba.g;
+						b += rgba.b;
+						a += rgba.a;
+					}
+				}
+				
+				var blockRGB = {};
+				blockRGB.r = Math.floor(r / blockNumPixels);
+				blockRGB.g = Math.floor(g / blockNumPixels);
+				blockRGB.b = Math.floor(b / blockNumPixels);
+				blockRGB.a = Math.floor(a / blockNumPixels);
+				
+				//console.log("a = " + blockRGB.a);
+				
+				if(blockRGB.a > 5)
+				{
+					var hex = ImageTools.RGBToHex(blockRGB);
+					var clip;
+					
+					var clipX = (startX-imageWidth/2) * clipRangeScale;
+					var clipY = (startY-imageHeight/2) * clipRangeScale;
+					var clipZ = initZ;
+					
+					if(useImageClip)
+						clip = addClip(clipX, clipY, clipZ, true, hex, blockSize, useCache);
+					else						
+						clip = addClip(clipX, clipY, clipZ, false, hex, blockSize, useCache);
+						
+					clip.initScale = clipInitScale;
+					clip.row = row;
+					clip.col = col;
+					
+					numClips++;
+					blockList[row][col] = clip;
+				}
+			}	
+		}
+		
+		console.log("num clips = " + numClips + ", numCols = " + numCols + ", numRows = " + numRows);
+	}
+	
+	function buildSampleImage()
+	{
+		var tWidth = 150, tHeight = 150;
+		var image = new Image();
+		image.src = imagePath;
+		if(image.width >= image.height)
+		{
+			if(image.width > tWidth)
+			{
+				var ratio = image.height/image.width;
+				tHeight = Math.floor(ratio*tWidth);
+			}
+			else
+			{
+				tWidth = image.width;
+				tHeight = image.height;
+			}
+		}
+		else
+		{
+			if(image.height > tHeight)
+			{
+				var ratio = image.width/image.height;
+				tWidth = Math.floor(ratio*tHeight);
+			}
+			else
+			{
+				tWidth = image.width;
+				tHeight = image.height;
+			}
+		}
+		
+		var tx = window.innerWidth - 10 - tWidth;
+		var ty = 10;
+		
+		
+		$("#sample_image_box").append("<img src='"+imagePath+"' style='width:100%; height:100%; '></img>");
+		
+		$("#sample_image_box").css("visibility", "visible");
+		$("#sample_image_box").css("left", tx+"px");
+		$("#sample_image_box").css("top", ty+"px");
+		$("#sample_image_box").css("width", tWidth + "px");
+		$("#sample_image_box").css("height", tHeight + "px");
+	}
+	
+	function buildTools()
+	{
+		buildSampleImage();
+		
+		var tx = 0;
+		var ty = Math.floor((window.innerHeight - $("#tool_box").height())/2);
+		
+		$("#tool_box").css("visibility", "visible");
+		$("#tool_box").css("left", tx + "px");
+		$("#tool_box").css("top", ty + "px");
+		
+		$("#motion_method").val("circle");
+		
+		$("#btn_reset_camera").click( resetCamera);
+		
+	}
+	
+	function switchTools()
+	{
+		if(toolsHiding == false)
+		{
+			toolsHiding = true;
+			var tx = -$("#tool_box").width()-1;
+			TweenLite.to("#tool_box", .3, {left:tx, ease:Power1.easeOut});
+		}
+		else
+		{
+			toolsHiding = false;
+			var tx = 0;
+			TweenLite.to("#tool_box", .5, {left:tx, ease:Back.easeOut});
+		}
+	}
+	
+	function resetCamera()
+	{
+		TweenLite.killTweensOf(s3d);
+		s3d.tCameraX = 0;
+		s3d.tCameraY = 0;
+		s3d.tCameraZ = 0;
+		s3d.resetCamera();
+	}
+	
+	function buildInteractive()
+	{	
+		$("body").mousemove( function(e){ mouseX = e.pageX; mouseY = e.pageY; } );
+		
+		$("#test_canvas").click( applyMotion );
+		
+		function applyMotion(evt)
+		{	
+			if(lockMotion) return;
+		
+			switch($("#motion_method").val())
+			{
+				case "circle":
+					MM_circle(numCols/2, numRows/2, s3d.clipList, clipInitScale, clipRangeScale);
+				break;
+				
+				case "random_even":
+					MM_randomSend(s3d.clipList);
+				break;
+				
+				case "snow_fall":
+				
+					lockMotion = true;
+					lockCameraRotation = true;
+					lockCameraMove = true;
+					
+					MM_snowFall(s3d.clipList, clipInitScale, s3d, snowFall_complete);
+				break;
+			}
+			
+					
+			function snowFall_complete()
+			{
+				lockMotion = false;
+				lockCameraRotation = false;
+				lockCameraMove = false;
+			}
+		}
+		
+		s3d.tCameraX = 0;
+		s3d.tCameraY = 0;
+		s3d.tCameraZ = 0;
+		
+		KeyHandler.bindListener('body');
+		KeyHandler.registKey("press", 87, keyPressHandler_w, .03);
+		KeyHandler.registKey("press", 83, keyPressHandler_s, .03);
+		KeyHandler.registKey("press", 65, keyPressHandler_a, .03);
+		KeyHandler.registKey("press", 68, keyPressHandler_d, .03);
+		KeyHandler.registKey("press", 82, keyPressHandler_r, .03);
+		KeyHandler.registKey("press", 70, keyPressHandler_f, .03);
+		
+		KeyHandler.registKey("keydown", 32, keyDownHandler_space);
+		
+		function keyDownHandler_space()
+		{
+			switchTools();
+		}
+		
+		function keyPressHandler_w()
+		{
+			if(lockCameraMove) return;
+			/*
+			s3d.tCameraZ += 20;
+			TweenLite.to(s3d, .5, {cameraZ:s3d.tCameraZ});
+			*/
+			s3d.tCameraY += 20;
+			TweenLite.to(s3d, .5, {cameraY:s3d.tCameraY});
+		}
+		
+		function keyPressHandler_s()
+		{
+			if(lockCameraMove) return;
+			/*
+			s3d.tCameraZ -= 20;
+			TweenLite.to(s3d, .5, {cameraZ:s3d.tCameraZ});
+			*/
+			s3d.tCameraY -= 20;
+			TweenLite.to(s3d, .5, {cameraY:s3d.tCameraY});
+		}
+		
+		function keyPressHandler_r()
+		{
+			if(lockCameraMove) return;
+			s3d.tCameraZ += 20;
+			TweenLite.to(s3d, .5, {cameraZ:s3d.tCameraZ});
+		}
+		
+		function keyPressHandler_f()
+		{
+			if(lockCameraMove) return;
+			s3d.tCameraZ -= 20;
+			TweenLite.to(s3d, .5, {cameraZ:s3d.tCameraZ});
+		}
+		
+		function keyPressHandler_a()
+		{
+			if(lockCameraMove) return;
+			s3d.tCameraX -= 20;
+			TweenLite.to(s3d, .5, {cameraX:s3d.tCameraX});
+		}
+		
+		function keyPressHandler_d()
+		{
+			if(lockCameraMove) return;
+			s3d.tCameraX += 20;
+			TweenLite.to(s3d, .5, {cameraX:s3d.tCameraX});
+		}
+	}
+}
+
+</script>
+
+</body>
+</html>
