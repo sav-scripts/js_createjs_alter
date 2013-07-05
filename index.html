@@ -28,7 +28,6 @@
 <script src="js/MotionMethods.js"></script>
 <script src="js/SimplePreLoading.js"></script>
 
-
 </head>
 
 <body onload="init()">
@@ -60,7 +59,20 @@
 	<button id="btn_reset_camera">Reset Position</button>
 	<button id="btn_snow_fall">Snow Fall</button>
     
+    <input type="checkbox" id="rotate_y_lock" /><label>Rotate Y Lock</label><br />
+    <input type="checkbox" id="rotate_x_lock" /><label>Rotate X Lock</label>
+    <!--
+    <div id="format">
+      <input type="checkbox" id="check1" /><label for="check1">B</label>
+      <input type="checkbox" id="check2" /><label for="check2">I</label>
+      <input type="checkbox" id="check3" /><label for="check3">U</label>
+	</div>
+    -->
+    
     <div class="info">
+    Camera => <br />
+    Pos: <div2 id="camera_position"></div2><br />
+    Arc: <div2 id="camera_arc"></div2><br />
     Item => <br />
     Pos: <div2 id="item_position"></div2><br />
     Arc: <div2 id="item_arc"></div2><br />
@@ -81,12 +93,15 @@ var lockCameraRotation = false;
 var lockCameraMove = false;
 var lockMotion = false;
 
+var rotateXLock = false;
+var rotateYLock = false;
+
 var numCols, numRows;
 var focalLength = 500;
-var blockWidth = 6, blockHeight = 6;
+var blockWidth = 10, blockHeight = 10;
 var blockSize = Math.floor(blockWidth/2);
+var clipRangeScale = 1.3;
 var initZ = 0;
-var clipRangeScale = 1.8;
 
 //var useImageClip = false;
 //var clipInitScale = 1;
@@ -114,6 +129,7 @@ function init()
 {
 	stats = new Stats();
 	stats.setMode(0);
+	
 	$("#tool_block").append(stats.domElement);
 	
 	loadingIcon = new SimplePreloading();
@@ -262,8 +278,8 @@ function build()
 		
 		if(lockCameraRotation == false)
 		{
-			angleY = -(mouseX - centerX) * 0.005;
-			angleX = -(mouseY - centerY) * 0.005;
+			angleY = (rotateYLock) ? 0 : (mouseX - centerX) * 0.005;
+			angleX = (rotateXLock) ? 0 : -(mouseY - centerY) * 0.005;
 			
 			TweenLite.to(tav, .6, {ease:Power1.easeOut, x:angleX, y:angleY});	
 			s3d.setSpace(null, null, null, tav.x, tav.y, null);
@@ -280,15 +296,17 @@ function build()
 		stage.update();
 		
 		$("#item_position").text("(" + Math.floor(s3d.posX) + ", "+Math.floor(s3d.posY)+", "+Math.floor(s3d.posZ)+")");
+		$("#item_arc").text("(" + arcToDegree(s3d.arcX) + ", "+arcToDegree(s3d.arcY)+", "+arcToDegree(s3d.arcZ)+")");
 		
-		$("#item_arc").text("(" + floor2(s3d.arcX) + ", "+floor2(s3d.arcY)+", "+floor2(s3d.arcZ)+")");
+		$("#camera_position").text("(" + Math.floor(s3d.cameraX) + ", "+Math.floor(s3d.cameraY)+", "+Math.floor(s3d.cameraZ)+")");
+		$("#camera_arc").text("(" + arcToDegree(s3d.cameraArcX) + ", "+arcToDegree(s3d.cameraArcY)+", "+arcToDegree(s3d.cameraArcZ)+")");
 		
 		stats.end();
 	}
 	
-	function floor2(v)
+	function arcToDegree(arc)
 	{
-		return Math.floor(v*100)/100;
+		return Math.floor(arc/Math.PI*180);
 	}
 	
 	function processBitmapData()
@@ -305,7 +323,7 @@ function build()
 		
 		var dx, dy;
 		var numClips = 0;
-		var blockNumPixels = blockWidth * blockHeight;
+		var blockNumPixels;
 		var col, row;
 		numCols = Math.floor(imageWidth/blockWidth);
 		numRows = Math.floor(imageHeight/blockHeight);
@@ -316,6 +334,8 @@ function build()
 			
 			for(col=0;col<numCols;col++)
 			{
+				blockNumPixels = 0;
+				
 				var startX = col*blockWidth;
 				var startY = row*blockHeight;
 				var tx, ty;				
@@ -332,11 +352,17 @@ function build()
 						tx = startX + dx;
 						if(tx > imageWidth) continue;
 						
-						var rgba = ImageTools.getRGBA(imageData, imageWidth, tx, ty);
-						r += rgba.r;
-						g += rgba.g;
-						b += rgba.b;
-						a += rgba.a;
+						var rgba = ImageTools.getRGBA(imageData, imageWidth, tx, ty);		
+						
+						if(rgba.a > 254) 
+						{
+							blockNumPixels ++;
+							
+							r += rgba.r;
+							g += rgba.g;
+							b += rgba.b;
+							a += rgba.a;
+						}
 					}
 				}
 				
@@ -353,8 +379,8 @@ function build()
 					var hex = ImageTools.RGBToHex(blockRGB);
 					var clip;
 					
-					var clipX = (startX-imageWidth/2) * clipRangeScale;
-					var clipY = (startY-imageHeight/2) * clipRangeScale;
+					var clipX = (startX - imageWidth/2) * clipRangeScale;
+					var clipY = (imageHeight/2 - startY) * clipRangeScale;
 					var clipZ = initZ;
 					
 					if(useImageClip)
@@ -431,6 +457,15 @@ function build()
 		$("#tool_box").css("left", tx + "px");
 		$("#tool_box").css("top", ty + "px");
 		
+		$("#rotate_x_lock").click( function(){ updateCheckBox("#rotate_x_lock", "rotateXLock") });
+		$("#rotate_y_lock").click( function(){ updateCheckBox("#rotate_y_lock", "rotateYLock") });
+		
+		function updateCheckBox(elem, param)
+		{			
+			($(elem).attr("checked")) ?  eval(param + "= false") : eval(param + "= true");
+			$(elem).attr("checked", eval(param));
+		}
+		
 		$("#motion_method").val("turbo");
 		
 		$("#btn_reset_camera").click( resetCamera);
@@ -451,7 +486,6 @@ function build()
 				//lockCameraMove = false;
 			}
 		});
-		
 	}
 	
 	function switchTools()
@@ -541,7 +575,7 @@ function build()
 			s3d.tPosZ += 20;
 			TweenLite.to(s3d, .5, {posZ:s3d.tPosZ});
 			*/
-			s3d.tPosY -= 20;
+			s3d.tPosY += 20;
 			TweenLite.to(s3d, .5, {posY:s3d.tPosY});
 		}
 		
@@ -552,7 +586,7 @@ function build()
 			s3d.tPosZ -= 20;
 			TweenLite.to(s3d, .5, {posZ:s3d.tPosZ});
 			*/
-			s3d.tPosY += 20;
+			s3d.tPosY -= 20;
 			TweenLite.to(s3d, .5, {posY:s3d.tPosY});
 		}
 		

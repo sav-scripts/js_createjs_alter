@@ -71,7 +71,7 @@ body{
 	width:100%;
 	margin-bottom:10px;
 }
-#tool_box div
+#tool_box div,label
 {
 	width:100%;
 	margin:0px;
@@ -90,4 +90,3 @@ body{
 {
 	text-align:left;
 }
-

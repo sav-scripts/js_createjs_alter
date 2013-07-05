@@ -4,9 +4,9 @@ MM_snowFall = function(clipList, clipInitScale, s3d, cb)
 	
 	s3d.resetSpace();
 	s3d.posZ = 0;
-	s3d.arcZ = -.1;
-	s3d.arcY = -.1;
-	s3d.arcX = -.1;
+	s3d.arcZ = .1;
+	s3d.arcY = .1;
+	s3d.arcX = .1;
 	//s3d.setSpace(0,0,-400);
 	
 	var array = [];
@@ -37,7 +37,7 @@ MM_snowFall = function(clipList, clipInitScale, s3d, cb)
 		var delay = i * .02;
 		
 		var tl2 = new TimelineLite();
-		tl2.from(clip, time, {ease:Power1.easeOut, delay:delay, initScale:clip.initScale*15, z3d:clip.z3d-3000, distance:distance*4, arc:initArc, onUpdate:circleMotion_update, onUpdateParams:[clip]});
+		tl2.from(clip, time, {ease:Power1.easeOut, delay:delay, initScale:clip.initScale*15, z3d:clip.z3d+3000, distance:distance*4, arc:initArc, onUpdate:circleMotion_update, onUpdateParams:[clip]});
 		
 		tl.add(tl2, "-=" + tl2.duration);
 		
@@ -57,7 +57,7 @@ MM_snowFall = function(clipList, clipInitScale, s3d, cb)
 		clip.y3d = (clip.length + clip.distance * clipRangeScale) * sinV;
 	}
 	
-	TweenLite.from(s3d, duration, {posZ:s3d.posZ+2000, arcZ:s3d.arcZ + .4, onComplete:timelineComplete});
+	TweenLite.from(s3d, duration, {posZ:s3d.posZ-2000, arcZ:s3d.arcZ - .4, onComplete:timelineComplete});
 	
 	function timelineComplete()
 	{

@@ -34,12 +34,21 @@ function Simple3DSpcae(parentContainer, focalLength)
 	this.container = new createjs.Container();
 	
 	var _autoId = 0;
+	
 	var _posX = 0;
 	var _posY = 0;
 	var _posZ = 0;
 	var _arcX = 0;
 	var _arcY = 0;
 	var _arcZ = 0;
+	
+	var _cameraX = 0;
+	var _cameraY = 0;
+	var _cameraZ = 400;
+	var _cameraArcX = 0;
+	var _cameraArcY = 0;
+	var _cameraArcZ = 0;
+	
 	var _cosX, _sinX, _cosY, _sinY, _cosZ, _sinZ;
 	var _focalLength = 600;
 	
@@ -76,6 +85,26 @@ function Simple3DSpcae(parentContainer, focalLength)
 	Object.defineProperty(Simple3DSpcae.prototype, "arcZ", {
 	    get: function() {return _arcZ; },
 	    set: function(v) { _arcZ = v;	 } });
+		
+		
+	Object.defineProperty(Simple3DSpcae.prototype, "cameraX", {
+	    get: function() {return _cameraX; },
+	    set: function(v) { _cameraX = v;	 } });
+	Object.defineProperty(Simple3DSpcae.prototype, "cameraY", {
+	    get: function() {return _cameraY; },
+	    set: function(v) { _cameraY = v;	 } });
+	Object.defineProperty(Simple3DSpcae.prototype, "cameraZ", {
+	    get: function() {return _cameraZ; },
+	    set: function(v) { _cameraZ = v;	 } });
+	Object.defineProperty(Simple3DSpcae.prototype, "cameraArcX", {
+	    get: function() {return _cameraArcX; },
+	    set: function(v) { _cameraArcX = v;	 } });
+	Object.defineProperty(Simple3DSpcae.prototype, "cameraArcY", {
+	    get: function() {return _cameraArcY; },
+	    set: function(v) { _cameraArcY = v;	 } });
+	Object.defineProperty(Simple3DSpcae.prototype, "cameraArcZ", {
+	    get: function() {return _cameraArcZ; },
+	    set: function(v) { _cameraArcZ = v;	 } });
 	
 	/*
 	this.__defineGetter__("posX", function(){ return _posX; });
@@ -85,7 +114,6 @@ function Simple3DSpcae(parentContainer, focalLength)
 	this.__defineGetter__("posZ", function(){ return _posZ; });
 	this.__defineSetter__("posZ", function(v){ _posZ = v });
 	*/
-	
 
 	this.addClip = function(clip, id, idToClipName)
 	{
@@ -138,7 +166,6 @@ function Simple3DSpcae(parentContainer, focalLength)
 		var arcY = Math.atan2(-_posZ, _posX);
 		var arcX = Math.atan2(_posY, -_posZ);
 		
-		
 		var caz = Math.PI/2;
 		
 		this.arcX = -arcX;
@@ -190,18 +217,9 @@ function Simple3DSpcae(parentContainer, focalLength)
 			var y0 = y;
 			var z0 = -x * _sinY + z * _cosY;
 			
-			
 			var x1 = x0;
-			var y1 = y0 * _cosX - z0 * _sinX;
-			var z1 = y0 * _sinX + z0 * _cosX;
-			
-			
-			/*
-			var x1 = x0;
-			var y1 = y0;
-			var z1 = z0;
-			*/
-			
+			var y1 = y0 * _cosX + z0 * _sinX;
+			var z1 = y0 * _sinX - z0 * _cosX;
 			
 			if(_arcZ != 0)
 			{
@@ -211,6 +229,12 @@ function Simple3DSpcae(parentContainer, focalLength)
 				x1 = x2;
 				y1 = y2;
 			}
+			
+			/*
+			var x1 = clip.x3d;
+			var y1 = clip.y3d;
+			var z1 = clip.z3d;
+			*/
 			
 			
 			var scaleRatio = _focalLength / (_focalLength + z1);
@@ -228,7 +252,7 @@ function Simple3DSpcae(parentContainer, focalLength)
 				clip.scaleX = clip.scaleY = scaleRatio * clip.initScale;
 				
 				clip.x = x1 * scaleRatio;
-				clip.y = y1 * scaleRatio;
+				clip.y = -y1 * scaleRatio;
 				clip.z = z1 * scaleRatio;
 				
 				if(clipCallBack != null) clipCallBack.apply(null, [clip]);
