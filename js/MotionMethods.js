@@ -2,12 +2,11 @@ MM_snowFall = function(clipList, clipInitScale, s3d, cb)
 {
 	console.log("snow fall start");
 	
-	s3d.resetSpace();
+	s3d.resetSpaceAndCamera();
 	s3d.posZ = 0;
 	s3d.arcZ = .1;
 	s3d.arcY = .1;
 	s3d.arcX = .1;
-	//s3d.setSpace(0,0,-400);
 	
 	var array = [];
 	for(var key in clipList) array.push(clipList[key]);
@@ -57,11 +56,11 @@ MM_snowFall = function(clipList, clipInitScale, s3d, cb)
 		clip.y3d = (clip.length + clip.distance * clipRangeScale) * sinV;
 	}
 	
-	TweenLite.from(s3d, duration, {posZ:s3d.posZ-2000, arcZ:s3d.arcZ - .4, onComplete:timelineComplete});
+	TweenLite.from(s3d, duration, {cameraZ:s3d.cameraZ+2000, arcZ:s3d.arcZ - .4, onComplete:timelineComplete});
 	
 	function timelineComplete()
 	{
-		cb.apply(null);
+		TweenLite.delayedCall(5, cb);
 	}
 	
 	function sortFunc(a, b)

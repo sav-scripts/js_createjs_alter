@@ -1,3 +1,9 @@
+/*
+	camera arc is not applyed yet
+
+*/
+
+
 (function()
 {
 	var Clip3D = function()
@@ -42,14 +48,17 @@ function Simple3DSpcae(parentContainer, focalLength)
 	var _arcY = 0;
 	var _arcZ = 0;
 	
+	var _cosX, _sinX, _cosY, _sinY, _cosZ, _sinZ;
+	
 	var _cameraX = 0;
 	var _cameraY = 0;
-	var _cameraZ = 400;
+	var _cameraZ = 0;
 	var _cameraArcX = 0;
 	var _cameraArcY = 0;
 	var _cameraArcZ = 0;
 	
-	var _cosX, _sinX, _cosY, _sinY, _cosZ, _sinZ;
+	var _cCosX, _cSinX, _cCosY, _cSinY, _cCosZ, _cSinZ;
+	
 	var _focalLength = 600;
 	
 	this.ccx = 0;
@@ -127,6 +136,17 @@ function Simple3DSpcae(parentContainer, focalLength)
 		this.clipList[id] = clip;
 	}
 	
+	this.clear = function()
+	{
+		for(var id in this.clipList)
+		{
+			var clip = this.clipList[id];
+			clip.parent.removeChild(clip);
+		}
+		
+		this.clipList = [];
+	}
+	
 	this.listClips = function()
 	{
 		for(var key in this.clipList)
@@ -160,6 +180,17 @@ function Simple3DSpcae(parentContainer, focalLength)
 		*/
 	}
 	
+	this.setCamera = function(x,y,z,arcX,arcY,arcZ)
+	{
+		if(x != null) this.cameraX = x;
+		if(y != null) this.cameraY = y;
+		if(z != null) this.cameraZ = z;
+		
+		if(arcX != null) this.cameraArcX = arcX;
+		if(arcY != null) this.cameraArcY = arcY;
+		if(arcZ != null) this.cameraArcZ = arcZ;
+	}
+	
 	this.cameraLookAtCenter = function()
 	{
 		var arcZ = Math.atan2(_posY, _posX);
@@ -177,20 +208,10 @@ function Simple3DSpcae(parentContainer, focalLength)
 		//console.log(Math.atan2(1,0));
 	}
 	
-	this.resetSpace = function()
+	this.resetSpaceAndCamera = function()
 	{
-		this.arcX = 0;
-		this.arcY = 0;
-		this.arcZ = 0;
-		
-		//this.setSpace(0, 0, -_focalLength);
-		this.setSpace(0, 0, 0);
-		/*
-		this.posX = 0;
-		this.posY = 0;
-		this.posZ = -this.focalLength;
-		this.cameraLookAtCenter();
-		*/
+		this.setSpace(0, 0, 0, 0, 0, 0);
+		this.setCamera(0, 0, 0, 0, 0, 0);
 	}
 	
 	this.update = function(clipCallBack)
@@ -204,11 +225,21 @@ function Simple3DSpcae(parentContainer, focalLength)
 		_cosZ = Math.cos(_arcZ); 
 		_sinZ = Math.sin(_arcZ);
 		
+		_cCosX = Math.cos(_cameraArcX); 
+		_cSinX = Math.sin(_cameraArcX);
+		
+		_cCosY = Math.cos(_cameraArcY); 
+		_cSinY = Math.sin(_cameraArcY);
+		
+		_cCosZ = Math.cos(_cameraArcZ); 
+		_cSinZ = Math.sin(_cameraArcZ);
+		
 		for(var id in this.clipList)
 		{
 			var clip = this.clipList[id];
 			
 			// rotating axis clock wise
+			
 			var x = clip.x3d + _posX;
 			var y = clip.y3d + _posY;
 			var z = clip.z3d + _posZ;
@@ -219,16 +250,33 @@ function Simple3DSpcae(parentContainer, focalLength)
 			
 			var x1 = x0;
 			var y1 = y0 * _cosX + z0 * _sinX;
-			var z1 = y0 * _sinX - z0 * _cosX;
-			
-			if(_arcZ != 0)
-			{
-				var x2 = x1*_cosZ - y1*_sinZ;
-				var y2 = x1*_sinZ + y1*_cosZ;
+			var z1 = y0 * _sinX - z0 * _cosX;	
+		
+			var x2 = x1*_cosZ - y1*_sinZ;
+			var y2 = x1*_sinZ + y1*_cosZ;
+			var z2 = z1;
+		
+			var tx = x1 - _cameraX;
+			var ty = y1 - _cameraY;
+			var tz = z1 + _cameraZ;
 				
-				x1 = x2;
-				y1 = y2;
-			}
+			/*
+			var x4 = x3 * _cCosY + z3* _cSinY;
+			var y4 = y3;
+			var z4 = -x3 * _cSinY + z3 * _cCosY;
+			
+			var x5 = x4;
+			var y5 = y4 * _cCosX + z4 * _cSinX;
+			var z5 = y4 * _cSinX - z4 * _cCosX;	
+		
+			var x6 = x5*_cCosZ - y5*_cSinZ;
+			var y6 = x5*_cSinZ + y5*_cCosZ;
+			var z6 = z5;
+			
+			tx = x6;
+			ty = y6;
+			tz = z6;
+			*/
 			
 			/*
 			var x1 = clip.x3d;
@@ -236,11 +284,10 @@ function Simple3DSpcae(parentContainer, focalLength)
 			var z1 = clip.z3d;
 			*/
 			
+			var scaleRatio = _focalLength / (_focalLength + tz);
 			
-			var scaleRatio = _focalLength / (_focalLength + z1);
-			
-			//if(scaleRatio < 0 || z1 > _focalLength)
-			//if(scaleRatio < 0 || z1 < 0)
+			//if(scaleRatio < 0 || tz > _focalLength)
+			//if(scaleRatio < 0 || tz < 0)
 			if(scaleRatio < 0)
 			{
 				clip.visible = false;
@@ -251,9 +298,9 @@ function Simple3DSpcae(parentContainer, focalLength)
 				
 				clip.scaleX = clip.scaleY = scaleRatio * clip.initScale;
 				
-				clip.x = x1 * scaleRatio;
-				clip.y = -y1 * scaleRatio;
-				clip.z = z1 * scaleRatio;
+				clip.x = tx * scaleRatio;
+				clip.y = -ty * scaleRatio;
+				clip.z = tz * scaleRatio;
 				
 				if(clipCallBack != null) clipCallBack.apply(null, [clip]);
 			}
@@ -270,5 +317,5 @@ function Simple3DSpcae(parentContainer, focalLength)
 	parentContainer.addChild(this.container);
 	if(focalLength) _focalLength = focalLength;
 	//this.setCamera(0,0,0,0,0,0);
-	this.resetSpace();
+	this.resetSpaceAndCamera();
 }
