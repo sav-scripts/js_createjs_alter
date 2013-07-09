@@ -1,4 +1,3 @@
-
 var stats;
 
 var ss3d;
@@ -15,7 +14,7 @@ var rotateYLock = false;
 
 var numCols, numRows;
 var focalLength = 500;
-var blockWidth = 10, blockHeight = 10;
+var blockWidth = 9, blockHeight = 9;
 var blockSize = Math.floor(blockWidth/2);
 var clipRangeScale = 1.3;
 var initZ = 0;
@@ -57,9 +56,6 @@ function prepareResources()
 	var queue = new createjs.LoadQueue(false);
 	queue.addEventListener("complete", loadImagesComplete);
 	
-	
-	//var array = particleImagePathList.concat([imagePath]);
-	//queue.loadManifest(array);
 	queue.loadManifest(particleImagePathList);
 	
 	function loadImagesComplete()
@@ -71,14 +67,7 @@ function prepareResources()
 		buildTools();
 		buildInteractive();
 		createWith(imagePath);
-		/*
-		sampleImage = new Image();
-		sampleImage.src = imagePath;
-		
-		build();
-		*/
 	}
-	//queue.load();
 }
 
 function createWith(targetImagePath)
@@ -103,15 +92,16 @@ function destroy()
 	
 function build()
 {
-	//TweenLite.delayedCall(.5, processBitmapData);
+	updateThumb();
+	processBitmapData(bitmapDataProcessed);
+}
+
+function bitmapDataProcessed()
+{
+	loadingIcon.destroy();
+	createjs.Ticker.setPaused(false);
 	
-		updateThumb();
-	
-	var tl = new TimelineLite();
-	
-	tl.call(processBitmapData, null, null, "+=1").
-	call(loadingIcon.destroy, null, loadingIcon, "+=.2").
-	call(createjs.Ticker.setPaused, [false]);
+	TweenLite.from("#test_canvas", .5, {alpha:0});
 }
 
 
@@ -167,7 +157,7 @@ function build()
 				s3d.setSpace(null, null, null, tav.x, tav.y, null);
 			}
 			
-			
+			//console.log("update");
 			/*
 			angleZ = -(mouseX - centerX) * 0.005;
 			if(lockCameraRotation == false) s3d.setCamera(null, null, null, null, null, angleZ);
@@ -211,6 +201,120 @@ function build()
 		s3d.tCameraArcX = 0;
 		s3d.tCameraArcY = 0;
 		s3d.tCameraArcZ = 0;
+	}
+	
+	/*** after image loaded ***/
+	function processBitmapData(cb)
+	{
+		sampleImage = new Image();
+		sampleImage.src = imagePath;
+	
+		var imageData, imageWidth, imageHeight;
+		
+		var imageData = ImageTools.getImageData(sampleImage);
+		var imageWidth = sampleImage.width;
+		var imageHeight = sampleImage.height;
+		
+		var dx, dy;
+		var numClips = 0;
+		var blockNumPixels;
+		var blockNumPixels_standard = blockWidth * blockHeight;
+		var col, row;
+		numCols = Math.floor(imageWidth/blockWidth);
+		numRows = Math.floor(imageHeight/blockHeight);
+		
+		var numBlocks = numCols * numRows;
+		var i=0;
+		
+		processStep();
+		
+		function processStep()
+		{
+			var step = 0;
+			var numSteps = 30;
+			for(step=0;step<numSteps;step++)
+			{
+				if(i < numBlocks)
+				{
+					row = Math.floor(i/numCols);
+					col = i % numCols;
+					processBlock(col, row);
+					i++;
+				}
+				else
+				{
+					console.log("num clips = " + numClips + ", numCols = " + numCols + ", numRows = " + numRows);
+					cb.apply(null);
+					return;
+				}
+			}
+						
+			setTimeout(processStep, 30);
+		}
+		
+		function processBlock(col, row)
+		{
+			blockNumPixels = 0;
+				
+				var startX = col*blockWidth;
+				var startY = row*blockHeight;
+				var tx, ty;				
+				
+				var r=0;g=0;b=0,a=0;
+				
+				for(dy=0;dy<blockHeight;dy++)
+				{
+					ty = startY + dy;
+					if(ty > imageHeight) continue;
+					
+					for(dx=0;dx<blockWidth;dx++)
+					{
+						tx = startX + dx;
+						if(tx > imageWidth) continue;
+						
+						var rgba = ImageTools.getRGBA(imageData, imageWidth, tx, ty);		
+						
+						if(rgba.a > 254) 
+						{
+							blockNumPixels ++;
+							
+							r += rgba.r;
+							g += rgba.g;
+							b += rgba.b;
+							a += rgba.a;
+						}
+					}
+				}
+				
+				var blockRGB = {};
+				blockRGB.r = Math.floor(r / blockNumPixels);
+				blockRGB.g = Math.floor(g / blockNumPixels);
+				blockRGB.b = Math.floor(b / blockNumPixels);
+				blockRGB.a = Math.floor(a / blockNumPixels);
+				
+				//console.log("a = " + blockRGB.a);
+				
+				if(blockRGB.a > 5)
+				{
+					var hex = ImageTools.RGBToHex(blockRGB);
+					var clip;
+					
+					var clipX = (startX - imageWidth/2) * clipRangeScale;
+					var clipY = (imageHeight/2 - startY) * clipRangeScale;
+					var clipZ = initZ;
+					
+					if(useImageClip)
+						clip = addClip(clipX, clipY, clipZ, true, hex, blockSize, useCache);
+					else						
+						clip = addClip(clipX, clipY, clipZ, false, hex, blockSize, useCache);
+						
+					clip.initScale = clipInitScale;
+					clip.row = row;
+					clip.col = col;
+					
+					numClips++;
+				}
+		}
 	}
 	
 	function addClip(x3d, y3d, z3d, useImage, colorHex, size, useCache)
@@ -273,104 +377,6 @@ function build()
 		s3d.addClip(clip);
 		
 		return clip;
-	}
-	
-	
-	
-	/*** after image loaded ***/
-	function processBitmapData()
-	{
-		sampleImage = new Image();
-		sampleImage.src = imagePath;
-	
-		var imageData, imageWidth, imageHeight;
-		var blockList = [];
-		
-		var imageData = ImageTools.getImageData(sampleImage);
-		var imageWidth = sampleImage.width;
-		var imageHeight = sampleImage.height;
-		
-		//console.log("img width = " + imageWidth + ", image height = " + imageHeight);
-		//console.log("color = " + JSON.stringify(ImageTools.getRGBA(imageData, 100,100)));
-		
-		var dx, dy;
-		var numClips = 0;
-		var blockNumPixels;
-		var col, row;
-		numCols = Math.floor(imageWidth/blockWidth);
-		numRows = Math.floor(imageHeight/blockHeight);
-		
-		for(row=0;row<numRows;row++)
-		{	
-			blockList[row] = [];
-			
-			for(col=0;col<numCols;col++)
-			{
-				blockNumPixels = 0;
-				
-				var startX = col*blockWidth;
-				var startY = row*blockHeight;
-				var tx, ty;				
-				
-				var r=0;g=0;b=0,a=0;
-				
-				for(dy=0;dy<blockHeight;dy++)
-				{
-					ty = startY + dy;
-					if(ty > imageHeight) continue;
-					
-					for(dx=0;dx<blockWidth;dx++)
-					{
-						tx = startX + dx;
-						if(tx > imageWidth) continue;
-						
-						var rgba = ImageTools.getRGBA(imageData, imageWidth, tx, ty);		
-						
-						if(rgba.a > 254) 
-						{
-							blockNumPixels ++;
-							
-							r += rgba.r;
-							g += rgba.g;
-							b += rgba.b;
-							a += rgba.a;
-						}
-					}
-				}
-				
-				var blockRGB = {};
-				blockRGB.r = Math.floor(r / blockNumPixels);
-				blockRGB.g = Math.floor(g / blockNumPixels);
-				blockRGB.b = Math.floor(b / blockNumPixels);
-				blockRGB.a = Math.floor(a / blockNumPixels);
-				
-				//console.log("a = " + blockRGB.a);
-				
-				if(blockRGB.a > 5)
-				{
-					var hex = ImageTools.RGBToHex(blockRGB);
-					var clip;
-					
-					var clipX = (startX - imageWidth/2) * clipRangeScale;
-					var clipY = (imageHeight/2 - startY) * clipRangeScale;
-					var clipZ = initZ;
-					
-					if(useImageClip)
-						clip = addClip(clipX, clipY, clipZ, true, hex, blockSize, useCache);
-					else						
-						clip = addClip(clipX, clipY, clipZ, false, hex, blockSize, useCache);
-						
-					clip.initScale = clipInitScale;
-					clip.row = row;
-					clip.col = col;
-					
-					numClips++;
-					blockList[row][col] = clip;
-				}
-			}	
-		}
-		
-		console.log("num clips = " + numClips + ", numCols = " + numCols + ", numRows = " + numRows);
 	}
 	
 	function updateThumb()
@@ -460,6 +466,9 @@ function build()
 		$("#btn_change_image").click(function()	{$("#image_file").click(); });
 		$("#image_file").change( function()
 		{
+			destroy();
+			updateStage();
+			createjs.Ticker.setPaused(true);
 			loadingIcon = new SimplePreloading();
 			loadingIcon.popInCenter();
 			
@@ -473,7 +482,6 @@ function build()
 			img.onload = function()
 			{
 				imagePath = loaclImagePath;
-				destroy();
 				build();
 			};
 			img.src = loaclImagePath;	
@@ -537,19 +545,11 @@ function build()
 		KeyHandler.registKey("press", 33, keyPressHandler_pageUp, .10);
 		KeyHandler.registKey("press", 34, keyPressHandler_pageDown, .10);
 		
-		
 		KeyHandler.registKey("press", 82, keyPressHandler_r, .10);
 		KeyHandler.registKey("press", 70, keyPressHandler_f, .10);
 		
 		KeyHandler.registKey("press", 81, keyPressHandler_q, .03);
 		KeyHandler.registKey("press", 69, keyPressHandler_e, .03);
-		
-		/*
-		KeyHandler.registKey("press", 104, keyPressHandler_pad8, .1);
-		KeyHandler.registKey("press", 98, keyPressHandler_pad2, .1);
-		KeyHandler.registKey("press", 100, keyPressHandler_pad4, .1);
-		KeyHandler.registKey("press", 102, keyPressHandler_pad6, .1);
-		*/
 		
 		KeyHandler.registKey("keydown", 32, keyDownHandler_space);
 		
@@ -656,35 +656,4 @@ function build()
 			s3d.tCameraZ += 40;
 			TweenLite.to(s3d, .5, {cameraZ:s3d.tCameraZ});
 		}
-		
-		/*
-		function keyPressHandler_pad8()
-		{
-			if(lockSpaceMove) return;
-			s3d.tCameraArcX += 0.08;
-			TweenLite.to(s3d, .5, {cameraArcX:s3d.tCameraArcX});
-		}
-		
-		function keyPressHandler_pad2()
-		{
-			if(lockSpaceMove) return;
-			s3d.tCameraArcX -= 0.08;
-			TweenLite.to(s3d, .5, {cameraArcX:s3d.tCameraArcX});
-		}
-		
-		function keyPressHandler_pad4()
-		{
-			if(lockSpaceMove) return;
-			s3d.tCameraArcY -= 0.08;
-			TweenLite.to(s3d, .5, {cameraArcY:s3d.tCameraArcY});
-		}
-		
-		function keyPressHandler_pad6()
-		{
-			if(lockSpaceMove) return;
-			s3d.tCameraArcY += 0.08;
-			TweenLite.to(s3d, .5, {cameraArcY:s3d.tCameraArcY});
-		}
-		*/
-	//}
 }

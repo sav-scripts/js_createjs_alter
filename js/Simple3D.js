@@ -82,7 +82,6 @@ function Simple3DSpcae(parentContainer, focalLength)
 	    get: function() {return _posZ; },
 	    set: function(v) { _posZ = v; } });
 		
-		
 	Object.defineProperty(Simple3DSpcae.prototype, "arcX", {
 	    get: function() {return _arcX; },
 	    set: function(v) { _arcX = v; } });
@@ -164,20 +163,6 @@ function Simple3DSpcae(parentContainer, focalLength)
 		if(arcXaxis != null) this.arcX = arcXaxis;
 		if(arcYaxis != null) this.arcY = arcYaxis;
 		if(arcZaxis != null) this.arcZ = arcZaxis;
-		
-		
-		//this.cameraLookAtCenter();
-		
-		/*
-		_cosX = Math.cos(_arcX);
-		_sinX = Math.sin(_arcX);
-		
-		_cosY = Math.cos(_arcY);
-		_sinY = Math.sin(_arcY);
-		
-		_cosZ = Math.cos(_arcZ);
-		_sinZ = Math.sin(_arcZ);
-		*/
 	}
 	
 	this.setCamera = function(x,y,z,arcX,arcY,arcZ)
